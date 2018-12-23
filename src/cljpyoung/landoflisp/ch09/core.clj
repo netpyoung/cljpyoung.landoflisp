@@ -6,11 +6,9 @@
 (def MONSTER_NUM 12)
 
 ;; variables
-;; TODO player {:health :agility} ...
 (defrecord Player [health agility strength])
 (def &player (ref (->Player 30 30 30)))
 (def &random (atom (rand/->random 100)))
-
 
 ;; functions
 (defn random [x]
@@ -19,10 +17,6 @@
 
 (defn randval [n]
   (inc (random (max 1 n))))
-
-(defn fresh-line []
-  (println)
-  (flush))
 
 ;; =======================================
 ;; monster
@@ -132,10 +126,10 @@
   (every? monster-dead ms))
 
 (defn show-monsters [ms]
-  (fresh-line)
+  (println)
   (print "Your foes:")
   (doseq [[x m] (map-indexed vector ms)]
-    (fresh-line)
+    (println)
     (printf "   %s. " (inc x))
     (if (monster-dead m)
       (print "**dead**")
@@ -149,8 +143,9 @@
       (recur monsters))))
 
 (defn pick-monster [monsters]
-  (fresh-line)
+  (println)
   (print "Monster #:")
+  (flush)
   (let [x (read)]
     (if (not (and (int? x) (>= x 1) (<= x MONSTER_NUM)))
       (do (print "That is not a valid monster number.")
@@ -173,13 +168,13 @@
   (not (pos? (:health p))))
 
 (defn show-player [p]
-  (fresh-line)
+  (println)
   (let [{:keys [health agility strength]} p]
     (printf "You are a valiant knight with a health of %s, an agility of %s, and a strength of %s" health agility strength)))
 
 (defn player-attack [p m]
-  (fresh-line)
-  (println "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
+  (println)
+  (print "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
   (flush)
   (let [{:keys [strength]} p]
     (case (read)
@@ -187,7 +182,7 @@
 
       d (let [x (randval (quot strength 6))]
           (printf "Your double swing has a strength of %s" x)
-          (fresh-line)
+          (println)
           (monster-hit (pick-monster m) x)
           (when-not (monsters-dead m)
             (monster-hit (pick-monster m) x)))
@@ -206,11 +201,11 @@
       (when-not (monsters-dead ms)
         (show-monsters ms)
         (player-attack @&p ms)))
-    (fresh-line)
+    (println)
     (doseq [m ms]
       (when-not (monster-dead m)
         (monster-attack m &p)
-        (fresh-line)))
+        (println)))
     (recur &p ms)))
 
 (defn orc-battle []

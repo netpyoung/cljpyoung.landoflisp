@@ -1,6 +1,9 @@
 (ns cljpyoung.landoflisp.ch08.core
+  (:require [cljpyoung.landoflisp.common.graph-util :as graph-util])
   (:require [clojure.set :as set])
   (:require [cljpyoung.landoflisp.common.rand :as rand]))
+
+;; The Grand Theft Wumpus Game.
 
 ;; const
 (def NUM_NODE 30)
@@ -12,7 +15,7 @@
 (def &player-pos (atom -1))
 (def &congestion-city-nodes (atom nil))
 (def &congestion-city-edges (atom nil))
-(def &visited-nodes (atom nil))
+(def &visited-nodes (atom #{}))
 (def &random (atom (rand/->random 100)))
 
 ;; functions
@@ -25,7 +28,7 @@
 
 ;; node : number
 ;; edge : [node node]
-;; edge-alist : {node {node #{} ...} ...}
+;; edge-alist : {from-node {to-node [info...] ...} ...}
 
 (defn edge-pair [a b]
   (if (= a b)
@@ -103,7 +106,7 @@
 
 (defn make-city-edges
   " (make-city-edges)
-  ;; => {node {node #{...}} ...}"
+  ;; => {from-node {to-node [...] ...} ...}"
   []
   (let [nodes (range 1 NUM_NODE)
         edge-list (make-edge-list)
@@ -119,7 +122,7 @@
 
 (defn edges-to-alist
   "
-  ;;(edges-to-alist [[1 2] [1 3]])
+  ;; (edges-to-alist [[1 2] [1 3]])
   ;;=> {1 {2 [], 3 []}}"
   [edge-list]
   (->> edge-list
@@ -134,8 +137,8 @@
 
 (defn add-cops
   "
-  ;; (add-cops {1 {3 #{} 2 #{}} 2 {4 #{} 5 #{}}} [[1 3]])
-  ;;=> {1 {3 #{:cops}, 2 #{}}, 2 {4 #{}, 5 #{}}}"
+  ;; (add-cops {1 {3 [] 2 []} 2 {4 [] 5 []}} [[1 3]])
+  ;;=> {1 {3 [:cops], 2 []}, 2 {4 [], 5 []}}"
   [edge-alist edges-with-cops]
   (let [edges-with-cops (set edges-with-cops)]
     (->> edge-alist
@@ -143,24 +146,22 @@
                 (->> dests
                      (mapv (fn [[k v]]
                              (if-not (empty? (set/intersection (set (edge-pair node k)) edges-with-cops))
-                               [k #{:cops}]
-                               [k #{}])))
+                               [k [:cops]]
+                               [k []])))
                      (into {})
                      (vector node))))
          (into {}))))
 
-
 (defn neighbors
   "
-  ;;(neighbors 1 {1 {3 #{} 2 #{}}})
+  ;;(neighbors 1 {1 {3 [] 2 []}})
   ;;=> (3 2)"
   [node edge-alist]
   (keys (get edge-alist node)))
 
-
 (defn within-one
   "
-  ;; (within-one 1 2 {1 {3 #{} 2 #{}}})
+  ;; (within-one 1 2 {1 {3 [] 2 []}})
   ;;=> true"
   [a b edge-alist]
   (->> (neighbors a edge-alist)
@@ -169,7 +170,7 @@
 
 (defn within-two
   "
-  ;; (within-two 1 4 {1 {3 #{} 2 #{}} 2 {4 #{}}})
+  ;; (within-two 1 4 {1 {3 [] 2 []} 2 {4 []}})
   ;;=> true"
   [a b edge-alist]
   (or (within-one a b edge-alist)
@@ -180,7 +181,7 @@
 (defn make-city-nodes
   "
   ;; (make-city-nodes (make-city-edges))
-  ;;=> {node #{signal ...} ...}"
+  ;;=> {node [signal ...] ...}"
   [edge-alist]
   (let [wumpus (random-node)
         glow-worms (repeatedly NUM_WORM random-node)]
@@ -193,22 +194,12 @@
                        (when (some (complement empty?) (vals (get edge-alist node)))
                          :sirens!)]
                       (filter some?)
-                      (set)
+                      (vec)
                       (vector node))))
          (into {}))))
 
 (declare find-empty-node)
 (declare draw-city)
-
-(defn new-game
-  ([] (new-game (rand-int 9999999)))
-  ([random-seed]
-   (reset! &random (rand/->random random-seed))
-   (reset! &congestion-city-edges (make-city-edges))
-   (reset! &congestion-city-nodes (make-city-nodes @&congestion-city-edges))
-   (reset! &player-pos (find-empty-node))
-   (reset! &visited-nodes [@&player-pos])
-   (draw-city)))
 
 (defn find-empty-node []
   (let [node (random-node)]
@@ -217,7 +208,89 @@
       (recur))))
 
 (defn draw-city []
-  ;;(ugraph->png "city" *congestion-city-nodes* *congestion-city-edges*)
-  [@&congestion-city-nodes @&congestion-city-edges])
+  (graph-util/ugraph->png "city" @&congestion-city-nodes @&congestion-city-edges))
 
-;; (new-game)
+(defn known-city-nodes []
+  (let [visited-nodes @&visited-nodes]
+    (->> visited-nodes
+         (mapcat #(neighbors % @&congestion-city-edges))
+         (concat visited-nodes)
+         (distinct)
+         (mapv (fn [node]
+                 (if (contains? visited-nodes node)
+                   (let [n (get @&congestion-city-nodes node)]
+                     (if (= node @&player-pos)
+                       [node (conj n :*)]
+                       [node n]))
+                   [node [:?]]))))))
+
+(defn known-city-edges []
+  (let [visited-nodes @&visited-nodes
+        congestion-city-edges @&congestion-city-edges]
+    (->> visited-nodes
+         (map (fn [node]
+                (->> node
+                     (get congestion-city-edges)
+                     (mapv (fn [x]
+                             (let [[to _] x]
+                               (if (get visited-nodes to)
+                                 x
+                                 [to []]))))
+                     (into {})
+                     (vector node))))
+         (into {}))))
+
+(defn draw-known-city []
+  (graph-util/ugraph->png "known-city" (known-city-nodes) (known-city-edges)))
+
+(defn new-game
+  ([] (new-game (rand-int 9999999)))
+  ([random-seed]
+   (reset! &random (rand/->random random-seed))
+   (reset! &congestion-city-edges (make-city-edges))
+   (reset! &congestion-city-nodes (make-city-nodes @&congestion-city-edges))
+   (reset! &player-pos (find-empty-node))
+   (reset! &visited-nodes #{@&player-pos})
+   (draw-city)
+   (draw-known-city)))
+
+
+(declare handle-direction)
+(declare handle-new-place)
+(defn walk [pos]
+  (handle-direction pos false))
+
+(defn charge [pos]
+  (handle-direction pos true))
+
+(defn handle-direction [pos is-charging]
+  (let [player-pos @&player-pos
+        congestion-city-edges @&congestion-city-edges]
+    (let [edge (get (get congestion-city-edges player-pos) pos)]
+      (if edge
+        (handle-new-place edge pos is-charging)
+        (print "That location does not exist!")))))
+
+(defn handle-new-place [edge pos is-charging]
+  (let [congestion-city-nodes @&congestion-city-nodes
+        node (set (get congestion-city-nodes pos))
+        has-worm (and (contains? node :glow-worm)
+                      (not (contains? @&visited-nodes pos)))]
+    (swap! &visited-nodes conj pos)
+    (reset! &player-pos pos)
+    (draw-known-city)
+    (cond (contains? (set edge) :cops)
+          (print "You ran into the cops. Game Over.")
+
+          (contains? node :wumpus)
+          (if is-charging
+            (println "You found the Wumpus!")
+            (println "You ran into the Wumpus"))
+
+          is-charging
+          (println "You wasted your last bullet. Game Over.")
+
+          has-worm
+          (let [new-pos (random-node)]
+            (printf "You ran into a Glow Worm Gang! You're now at %s\n" new-pos)
+            (recur nil new-pos false)))))
