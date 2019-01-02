@@ -1,17 +1,18 @@
-(ns cljpyoung.landoflisp.ch15.core
+(ns cljpyoung.landoflisp.ch18.core
   (:require [cljpyoung.landoflisp.common.rand :as rand]))
 
-;; Dice of Doom
+;; Dice of Doom. v2
 (def NUM_PLAYERS 2)
 (def MAX_DICE 2)
-(def BOARD_SIZE 2)
+(def BOARD_SIZE 4)
 (def BOARD_HEXNUM (* BOARD_SIZE BOARD_SIZE))
+(def AI_LEVEL 4)
 
 ;; data structure
 ;; tree {:player int
 ;;       :board [[player dice]]
-;;       :moves []}
-;; move {:action ([from to] | nil) :tree}
+;;       :moves [(delay move)]}
+;; move {:action ([player dice] | nil) :tree}
 
 (def &random (atom (rand/->random 100)))
 (defn random [x]
@@ -45,7 +46,7 @@
   (dotimes [y BOARD_SIZE]
     (println)
     (dotimes [_ (- BOARD_SIZE y)]
-      (print " "))
+      (print "  "))
     (dotimes [x BOARD_SIZE]
       (let [[a b] (get board (+ x (* y BOARD_SIZE)))]
         (printf "%s-%s " (player-letter a) b)))))
@@ -111,8 +112,8 @@
 
 (defn attacking-moves
   "
-  > (attacking-moves [[0 1] [1 1] [0 2] [1 1]] 0 0)
-  ;;=> [{:action [2 3], :tree {:player 0, :board [[0 1] [1 1] [0 1] [0 1]], :moves [{:action nil, :tree {:player 1, :board [[0 1] [1 1] [0 1] [0 1]], :moves []}}]}}]
+  > (attacking-moves [[1 2] [0 1] [0 1] [0 1] [1 1] [0 1] [1 2] [1 2] [1 1] [0 2] [0 1] [0 1] [0 2] [0 1] [0 1] [0 1]] 0 0)
+  ;;=> ;;=> [#delay[{:status :pending, :val nil} 0x1299ce2] #delay[{:status :pending, :val nil} 0x89fdf6] #delay[{:status :pending, :val nil} 0xe373e4]]
   "
   [board cur-player spare-dice]
   (letfn [(player [pos] (first (get board pos)))
@@ -123,13 +124,14 @@
          (mapcat (fn [src]
                    (->> (neighbors src)
                         (filter (fn [dst] (and (not= (player dst) cur-player) (> (dice src) (dice dst)))))
-                        (map (fn [dst]
-                               {:action [src dst]
-                                :tree (game-tree (board-attack board cur-player src dst (dice src))
-                                                 cur-player
-                                                 (+ spare-dice (dice dst))
-                                                 false)
-                                })))))
+                        (map (fn [dst] [src dst])))))
+         (map (fn [[src dst]]
+                (delay {:action [src dst]
+                        :tree (game-tree (board-attack board cur-player src dst (dice src))
+                                         cur-player
+                                         (+ spare-dice (dice dst))
+                                         false)
+                        })))
          (vec))))
 
 (defn add-passing-move
@@ -141,11 +143,11 @@
   (if is-first-move
     moves
     (conj moves
-          {:action nil
-           :tree (game-tree (add-new-dice board player (dec spare-dice))
-                            (mod (inc player) NUM_PLAYERS)
-                            0
-                            true)})))
+          (delay {:action nil
+                  :tree (game-tree (add-new-dice board player (dec spare-dice))
+                                   (mod (inc player) NUM_PLAYERS)
+                                   0
+                                   true)}))))
 
 
 (defn print-info
@@ -194,14 +196,15 @@
   (let [{:keys [moves]} tree]
     (doseq [[n move] (map-indexed vector moves)]
       (let [n (inc n)
-            action (:action move)]
+            action (:action (force move))]
         (println)
         (printf "%s. " n)
         (if action
-          (printf "%s -> %s" (first action) (second action))
+          (let [[from to] action]
+            (printf "%s -> %s" from to))
           (print "end turn"))))
     (println)
-    (->> (read) (dec) (get moves) :tree)))
+    (->> (read) (dec) (get moves) force :tree)))
 
 (defn play-vs-human [tree]
   (print-info tree)
@@ -211,21 +214,35 @@
       (recur (handle-human tree)))))
 
 (declare get-ratings)
+(defn score-board [board player]
+  (->> (map-indexed vector board)
+       (map (fn [[pos [p _]]]
+              (cond (not= p player) -1
+                    (threatened pos board) 1
+                    :else 2)))
+       (apply +)))
+
+(defn threatened? [pos board]
+  (let [[player dice] (get board pos)]
+    (->> (neighbors pos)
+         (some (fn [n]
+                 (let [[nplayer ndice] (get board n)]
+                   (and (not= player nplayer) (> ndice dice)))))
+         (some?))))
+
 (defn rate-position' [tree p]
   (let [{:keys [moves player board]} tree]
-    (if (pos? (count moves))
+    (if-not (pos? (count moves))
+      (score-board board player)
       (->> (get-ratings tree p)
-           (apply (if (= player p) max min)))
-      (let [w (winners board)]
-        (if (some #{p} w)
-          (/ 1 (count w))
-          0)))))
+           (apply (if (= player p) max min))))))
+
 (def rate-position (memoize rate-position'))
 
 (defn get-ratings [tree player]
   (->> tree
        :moves
-       (mapv #(rate-position (:tree %) player))))
+       (mapv #(rate-position (:tree (force %)) player))))
 
 (defn handle-computer [tree]
   (let [{:keys [player moves]} tree]
@@ -234,6 +251,7 @@
          (apply min-key second)
          (first)
          (get moves)
+         force
          :tree)))
 
 (defn play-vs-computer [tree]
@@ -248,5 +266,111 @@
           :else
           (recur (handle-computer tree)))))
 
-;; (play-vs-human (game-tree [[1 2] [1 2] [0 2] [1 1]] 0 0 true))
-;; (play-vs-computer (game-tree [[1 2] [1 2] [0 2] [1 1]] 0 0 true))
+(defn limit-tree-depth [tree depth]
+  (let [{:keys [player board moves]} tree]
+    {:player player
+     :board board
+     :moves (if (zero? depth)
+              []
+              (->> moves
+                   (mapv (fn [move]
+                           (let [{:keys [action tree]} (force move)]
+                             {:action action
+                              :tree (limit-tree-depth tree (dec depth))})))))}))
+
+(defn handle-computer [tree]
+  (let [{:keys [player board moves]} tree]
+    (->> (get-ratings (limit-tree-depth tree AI_LEVEL) player)
+         (map-indexed vector)
+         (apply min-key second)
+         (first)
+         (get moves)
+         force
+         :tree)))
+
+;;       a-1 a-3 a-1 b-2
+;;     b-3 a-3 a-3 a-1
+;;   a-3 a-3 b-1 a-2
+;; b-3 a-3 a-1 a-3
+;; (-> [[0 1] [0 3] [0 1] [1 2]
+;;      [1 3] [0 3] [0 3] [0 1]
+;;      [0 3] [0 3] [1 1] [0 2]
+;;      [1 3] [0 3] [0 1] [0 3]]
+;;     (game-tree 0 0 true)
+;;     (play-vs-computer))
+
+;;       a-1 b-2 b-1 a-3
+;;     b-3 a-1 a-3 a-3
+;;   b-3 b-2 b-2 b-2
+;; a-3 a-3 a-2 a-2
+;; (-> [[0 1] [1 2] [1 1] [0 3]
+;;      [1 3] [0 1] [0 3] [0 3]
+;;      [1 3] [1 2] [1 2] [1 2]
+;;      [0 3] [0 3] [0 2] [0 2]]
+;;     (game-tree 0 0 true)
+;;     (play-vs-computer))
+
+;;         a-2 b-2 a-1 b-2 b-2
+;;       a-1 b-2 b-3 b-3 a-3
+;;     a-1 b-2 a-3 b-1 b-2
+;;   b-1 b-3 a-2 b-2 a-1
+;; b-3 b-1 b-1 a-3 b-3
+;; (-> [[0 2] [1 2] [0 1] [1 2] [1 2]
+;;      [0 1] [1 2] [1 3] [1 3] [0 3]
+;;      [0 1] [1 2] [0 3] [1 1] [1 2]
+;;      [1 1] [1 3] [0 2] [1 2] [0 1]
+;;      [1 3] [1 1] [1 1] [0 3] [1 3]]
+;;     (game-tree 0 0 true)
+;;     (play-vs-computer))
+
+
+(defn ab-rate-position [tree player upper-limit lower-limit]
+  (let [moves (:moves tree)]
+    (if (pos? (count moves))
+      (if (= (:player tree) player)
+        (apply max (ab-get-ratings-max tree player upper-limit lower-limit))
+        (apply min (ab-get-ratings-min tree player upper-limit lower-limit)))
+      (score-board (:board tree) player))))
+
+(defn ab-get-ratings-min [tree player upper-limit lower-limit]
+  (loop [acc []
+         moves (:moves tree)
+         upper-limit upper-limit]
+    (if-not (pos? (count moves))
+      acc
+      (let [[fst & rst] moves]
+        (let [x (ab-rate-position (:tree (force fst))
+                                  player
+                                  upper-limit
+                                  lower-limit)]
+          (if (<= x lower-limit)
+            (conj acc x)
+            (recur (conj acc x) rst (min x upper-limit))))))))
+
+(defn ab-get-ratings-max [tree player upper-limit lower-limit]
+  (loop [acc []
+         moves (:moves tree)
+         lower-limit lower-limit]
+    (if-not (pos? (count moves))
+      acc
+      (let [[fst & rst] moves]
+        (let [x (ab-rate-position (:tree (force fst))
+                                  player
+                                  upper-limit
+                                  lower-limit)]
+          (if (>= x upper-limit)
+            (conj acc x)
+            (recur (conj acc x) rst (max x lower-limit))))))))
+
+(defn handle-computer [tree]
+  (let [{:keys [player moves]} tree]
+    (->> (ab-get-ratings-max (limit-tree-depth tree AI_LEVEL)
+                             player
+                             Integer/MAX_VALUE
+                             Integer/MIN_VALUE)
+         (map-indexed vector)
+         (apply min-key second)
+         (first)
+         (get moves)
+         force
+         :tree)))

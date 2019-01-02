@@ -1,0 +1,2 @@
+{:require [cljpyoung.landoflisp]
+ :compiler-options {:asset-path "js/main.out"}}

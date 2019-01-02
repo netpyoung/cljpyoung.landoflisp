@@ -1,29 +1,115 @@
-(def project 'cljpyoung.landoflisp)
-(def version "0.1.0-SNAPSHOT")
+(def project
+  {:project     'netpyoung/cljpyoung.landoflisp
+   :version     "0.1.0"
+   :description "FIXME: write description"
+   :url         "https://github.com/netpyoung/cljpyoung.landoflisp"
+   :scm         {:url "https://github.com/netpyoung/cljpyoung.landoflisp"}
+   :license     {"GNU Free Documentation License 1.3"
+                 "https://www.gnu.org/licenses/fdl.txt"}})
 
-(set-env! :resource-paths #{"resources" "src"}
-          :source-paths   #{"test"}
-          :dependencies   '[[org.clojure/clojure "1.10.0"]
-                            [adzerk/boot-test "RELEASE" :scope "test"]])
+(set-env!
+ :source-paths #{"src" }
+ :resource-paths #{"resources/public"}
 
-(task-options!
- aot {:namespace   #{'cljpyoung.landoflisp}}
- pom {:project     project
-      :version     version
-      :description "FIXME: write description"
-      :url         "http://example/FIXME"
-      :scm         {:url "https://github.com/yourname/cljpyoung.landoflisp"}
-      :license     {"Eclipse Public License"
-                    "http://www.eclipse.org/legal/epl-v10.html"}}
- repl {:init-ns    'cljpyoung.landoflisp}
- jar {:main        'cljpyoung.landoflisp
-      :file        (str "cljpyoung.landoflisp-" version "-standalone.jar")})
+ :dependencies
+ '[[org.clojure/clojure "1.10.0"]
+
+   ;; clojurescript
+   [org.clojure/clojurescript "1.10.439"]
+   [adzerk/boot-cljs "2.1.5"]
+
+   ;; ref: https://github.com/adzerk-oss/boot-reload
+   [adzerk/boot-reload "0.6.0"]
+
+   [powerlaces/boot-figreload "0.5.14" :scope "test"]
+   [pandeiro/boot-http "0.7.6" :scope "test"]
+
+   ;; clojurescript repl
+   ;; ref: https://github.com/adzerk-oss/boot-cljs-repl
+   [adzerk/boot-cljs-repl   "0.4.0"] ;; latest release
+   [cider/piggieback        "0.3.9"  :scope "test"]
+   [weasel                  "0.7.0"  :scope "test"]
+   [nrepl                   "0.4.5"  :scope "test"]
+
+   ;; figwheel
+   ;; ref: https://github.com/boot-clj/boot-figreload
+   [powerlaces/boot-figreload "0.5.14" :scope "test"]
+
+   ;; Dirac and cljs-devtoos
+   ;; ref: https://github.com/binaryage/dirac
+   ;; ref: https://github.com/binaryage/cljs-devtools
+   [binaryage/dirac "1.3.0" :scope "test"]
+   [binaryage/devtools "0.9.10" :scope "test"]
+   [powerlaces/boot-cljs-devtools "0.2.0" :scope "test"]
+
+   [adzerk/boot-test "RELEASE" :scope "test"]])
+
+
+(deftask check []
+  ;; ref: https://github.com/tolitius/boot-check
+  (set-env! :dependencies #(conj % '[tolitius/boot-check "0.1.11" :scope "test"]))
+  (require '[tolitius.boot-check])
+  (let [with-yagni (resolve 'tolitius.boot-check/with-yagni)
+        with-eastwood (resolve 'tolitius.boot-check/with-eastwood)
+        with-kibit (resolve 'tolitius.boot-check/with-kibit)
+        with-bikeshed (resolve 'tolitius.boot-check/with-bikeshed)]
+    (comp
+     (with-yagni)
+     (with-eastwood)
+     (with-kibit)
+     (with-bikeshed))))
+
+(deftask bat-test
+  []
+  (set-env! :dependencies #(conj % '[metosin/bat-test "0.4.0" :scope "test"]))
+  (set-env! :dependencies #(conj % '[org.clojure/tools.namespace "0.3.0-alpha4" :exclusions [org.clojure/clojure] :scope "test"]))
+  (require '[metosin.bat-test])
+  (let [bat-test (resolve 'metosin.bat-test/bat-test)]
+    (bat-test)))
+
 
 (deftask build
-  "Build the project locally as a JAR."
-  [d dir PATH #{str} "the set of directories to write to (target)."]
-  (let [dir (if (seq dir) dir #{"target"})]
-    (comp (aot) (pom) (uber) (jar) (target :dir dir))))
+  [_ snapshot LOCAL boolean "build local"]
+  (task-options!
+   pom (if snapshot
+         (update-in project [:version] (fn [x] (str x "-SNAPSHOT")))
+         project))
+  (comp (pom)))
+
+(deftask local
+  []
+  (comp (build)
+        (jar)
+        (install)))
+
+(deftask local-snapshot
+  []
+  (comp (build :snapshot true)
+        (jar)
+        (install)))
+
+(deftask prepare-push
+  []
+  (set-env!
+   :repositories
+   #(conj % ["clojars" {:url "https://clojars.org/repo/"
+                        :username (get-sys-env "CLOJARS_USER" :required)
+                        :password (get-sys-env "CLOJARS_PASS" :required)}]))
+  identity)
+
+(deftask push-release
+  []
+  (comp (prepare-push)
+        (build)
+        (jar)
+        (push :repo "clojars" :ensure-release true)))
+
+(deftask push-snapshot
+  []
+  (comp (prepare-push)
+        (build :snapshot true)
+        (jar)
+        (push :repo "clojars" :ensure-snapshot true)))
 
 (deftask run
   "Run the project."
@@ -31,5 +117,30 @@
   (with-pass-thru fs
     (require '[cljpyoung.landoflisp :as app])
     (apply (resolve 'app/-main) args)))
+
+(require '[adzerk.boot-cljs :refer [cljs]])
+(require '[adzerk.boot-reload :refer [reload]])
+(require '[adzerk.boot-cljs-repl :refer [cljs-repl start-repl]])
+(require '[pandeiro.boot-http :refer [serve]])
+(require '[powerlaces.boot-cljs-devtools :refer [dirac cljs-devtools]])
+(deftask dev [D with-dirac bool "Enable Dirac Devtools."]
+  (comp
+   (serve :port 8080 :dir "target" :httpkit true)
+   (watch)
+   (cljs-devtools)
+   (reload)
+   (if-not with-dirac
+     (cljs-repl)
+     (dirac))
+
+   ;; ref: https://clojurescript.org/reference/compiler-options
+   (cljs :source-map true
+         :optimizations :none
+         :compiler-options {:external-config
+                            {:devtools/config {:features-to-install [:formatters :hints]
+                                               :fn-symbol "λ"
+                                               :print-config-overrides true}}})
+   #_(sift :include #{#"(^index\.html|^main\.js|^styles.css)"})
+   #_(target :dir #{"target"})))
 
 (require '[adzerk.boot-test :refer [test]])
