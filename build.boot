@@ -8,18 +8,38 @@
                  "https://www.gnu.org/licenses/fdl.txt"}})
 
 (set-env!
- :source-paths #{"src" }
+ :source-paths #{"src" "env/dev"}
  :resource-paths #{"resources/public"}
+
+ ;; https://okky.kr/article/424622
+ ;; https://cloudplatform.googleblog.com/2015/11/faster-builds-for-Java-developers-with-Maven-Central-mirror.html
+ ;; set BOOT_MAVEN_CENTRAL_MIRROR=https://maven-central-asia.storage-download.googleapis.com/repos/central/data/
+ :mirrors
+ {#"maven-central"
+  {:name "google"
+   :url "https://maven-central-asia.storage-download.googleapis.com/repos/central/data/"}
+  ;; #"clojar"
+  ;; {:name "x"
+  ;;  :url "https://clojars.org/repo/"}
+  }
 
  :dependencies
  '[[org.clojure/clojure "1.10.0"]
 
    ;; clojurescript
    [org.clojure/clojurescript "1.10.439"]
-   [adzerk/boot-cljs "2.1.5"]
+
+   ;; reagent
+   [reagent "0.7.0" :exclusions [cljsjs/react]]
+   [cljsjs/react "16.0.0-0"]
+   [cljsjs/react-dom "16.0.0-0"]
+   [cljsjs/react-with-addons "15.4.2-2"]
+
+
+   [adzerk/boot-cljs "2.1.5" :scope "test"]
 
    ;; ref: https://github.com/adzerk-oss/boot-reload
-   [adzerk/boot-reload "0.6.0"]
+   [adzerk/boot-reload "0.6.0" :scope "test"]
 
    [powerlaces/boot-figreload "0.5.14" :scope "test"]
    [pandeiro/boot-http "0.7.6" :scope "test"]
@@ -123,24 +143,12 @@
 (require '[adzerk.boot-cljs-repl :refer [cljs-repl start-repl]])
 (require '[pandeiro.boot-http :refer [serve]])
 (require '[powerlaces.boot-cljs-devtools :refer [dirac cljs-devtools]])
-(deftask dev [D with-dirac bool "Enable Dirac Devtools."]
+(deftask dev []
   (comp
-   (serve :port 8080 :dir "target" :httpkit true)
+   (serve :port 8080 :httpkit true)
    (watch)
-   (cljs-devtools)
    (reload)
-   (if-not with-dirac
-     (cljs-repl)
-     (dirac))
-
-   ;; ref: https://clojurescript.org/reference/compiler-options
-   (cljs :source-map true
-         :optimizations :none
-         :compiler-options {:external-config
-                            {:devtools/config {:features-to-install [:formatters :hints]
-                                               :fn-symbol "λ"
-                                               :print-config-overrides true}}})
-   #_(sift :include #{#"(^index\.html|^main\.js|^styles.css)"})
-   #_(target :dir #{"target"})))
+   (cljs-repl)
+   (cljs :ids #{"js\\main"})))
 
 (require '[adzerk.boot-test :refer [test]])

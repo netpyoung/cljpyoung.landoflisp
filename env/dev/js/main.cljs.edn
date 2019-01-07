@@ -1,0 +1,12 @@
+{:require  [cljpyoung.landoflisp]
+ :init-fns [cljpyoung.landoflisp/main]
+
+ :compiler-options
+ {:asset-path "js/main.out"
+
+  :language-in :ecmascript-2017
+  :language-out :ecmascript-2017
+  :source-map true
+  :parallel-build true
+  }
+ }
