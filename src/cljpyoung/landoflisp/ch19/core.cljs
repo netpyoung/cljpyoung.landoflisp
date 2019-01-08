@@ -443,7 +443,9 @@
 
 (defn draw-tile-svg [x y pos hex xx yy color chosen-tile]
   ^{:key (str "draw-tile-svg-root:" [x y pos hex xx yy])}
-  [:g
+  ;; on-click on :g
+  ;; ref: https://stackoverflow.com/questions/39706869/add-onclick-event-to-a-group-element-svg-with-react
+  [:g {:on-click #(js/alert (str "hi" [x y pos])) :style {:pointer-events "bounding-box;"}}
    (for [z (range 2)]
      (svg/polygon (mapv (fn [[px py]]
                           [(+ xx (* BOARD_SCALE px)) (+ yy (* BOARD_SCALE (+ py (* (- 1 z) 0.1))))])

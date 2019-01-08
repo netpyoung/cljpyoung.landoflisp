@@ -1,6 +1,8 @@
 # cljpyoung.landoflisp
 
 
+![landoflisp](./landoflisp.svg)
+
 * ch05 - https://github.com/netpyoung/cljpyoung.spels/blob/master/src/cljpyoung/spels.clj
 
 # Ref.
