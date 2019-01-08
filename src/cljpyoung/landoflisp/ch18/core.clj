@@ -214,11 +214,12 @@
       (recur (handle-human tree)))))
 
 (declare get-ratings)
+(declare threatened?)
 (defn score-board [board player]
   (->> (map-indexed vector board)
        (map (fn [[pos [p _]]]
               (cond (not= p player) -1
-                    (threatened pos board) 1
+                    (threatened? pos board) 1
                     :else 2)))
        (apply +)))
 
@@ -244,15 +245,16 @@
        :moves
        (mapv #(rate-position (:tree (force %)) player))))
 
-(defn handle-computer [tree]
-  (let [{:keys [player moves]} tree]
-    (->> (get-ratings tree player)
-         (map-indexed vector)
-         (apply min-key second)
-         (first)
-         (get moves)
-         force
-         :tree)))
+(declare handle-computer)
+;; (defn handle-computer [tree]
+;;   (let [{:keys [player moves]} tree]
+;;     (->> (get-ratings tree player)
+;;          (map-indexed vector)
+;;          (apply min-key second)
+;;          (first)
+;;          (get moves)
+;;          force
+;;          :tree)))
 
 (defn play-vs-computer [tree]
   (print-info tree)
@@ -278,15 +280,15 @@
                              {:action action
                               :tree (limit-tree-depth tree (dec depth))})))))}))
 
-(defn handle-computer [tree]
-  (let [{:keys [player board moves]} tree]
-    (->> (get-ratings (limit-tree-depth tree AI_LEVEL) player)
-         (map-indexed vector)
-         (apply min-key second)
-         (first)
-         (get moves)
-         force
-         :tree)))
+;; (defn handle-computer [tree]
+;;   (let [{:keys [player board moves]} tree]
+;;     (->> (get-ratings (limit-tree-depth tree AI_LEVEL) player)
+;;          (map-indexed vector)
+;;          (apply min-key second)
+;;          (first)
+;;          (get moves)
+;;          force
+;;          :tree)))
 
 ;;       a-1 a-3 a-1 b-2
 ;;     b-3 a-3 a-3 a-1
@@ -323,7 +325,8 @@
 ;;     (game-tree 0 0 true)
 ;;     (play-vs-computer))
 
-
+(declare ab-get-ratings-max)
+(declare ab-get-ratings-min)
 (defn ab-rate-position [tree player upper-limit lower-limit]
   (let [moves (:moves tree)]
     (if (pos? (count moves))

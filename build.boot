@@ -26,11 +26,19 @@
  :dependencies
  '[[org.clojure/clojure "1.10.0"]
 
+   ;; ref: https://github.com/clojure/core.async
+   [org.clojure/core.async "0.4.490"]
+   ;; ref: https://github.com/ztellman/aleph
+   [aleph "0.4.6"]
+
    ;; clojurescript
    [org.clojure/clojurescript "1.10.439"]
 
-   ;; reagent
+   ;; reagent : https://github.com/reagent-project/reagent
    [reagent "0.7.0" :exclusions [cljsjs/react]]
+   ;; re-frame : https://github.com/Day8/re-frame
+   [re-frame "0.10.6"]
+
    [cljsjs/react "16.0.0-0"]
    [cljsjs/react-dom "16.0.0-0"]
    [cljsjs/react-with-addons "15.4.2-2"]
