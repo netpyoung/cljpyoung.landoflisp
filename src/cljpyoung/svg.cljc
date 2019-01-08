@@ -27,17 +27,13 @@
    :stroke (str-rgb (brightness color -100))})
 
 (defn polygon [points color]
+  ^{:key (str "polygon:" points color)}
   [:polygon {:points (str-points points)
              :style (style color)}])
-
 
 (defmacro svg [w h & body]
   `[:svg {:style {:border "1px solid"
                   :background "white"
                   :width (str ~w)
                   :height (str ~h)}}
-    ~@body
-    ])
-    ;; (polygon
-    ;;  [[50 30] [74 20] [74 50] [50 60]]
-    ;;  [215 0 0])
+    ~@body])

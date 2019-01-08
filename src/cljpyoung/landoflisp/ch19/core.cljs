@@ -422,25 +422,27 @@
              (+ y (* DICE_SCALE py))])
           (f [pol col]
             (svg/polygon (mapv calc-pt pol) col))]
+    ^{:key (str "darw-dice-root" [x y col])}
     [:g
      (f [[0 -1] [-0.6 -0.75] [0 -0.5] [0.6 -0.75]] (svg/brightness col 40))
      (f [[0 -0.5] [-0.6 -0.75] [-0.6 0] [0 0.25]] col)
      (f [[0 -0.5] [0.6 -0.75] [0.6 0] [0 0.25]] (svg/brightness col -40))
-     (mapv (fn [x y]
-             (svg/polygon (mapv (fn [xx yy]
-                                  (calc-pt [(+ x (* xx DOT_SIZE))
-                                            (+ y (* yy DOT_SIZE))]))
-                                [-1 -1 1 1]
-                                [-1 1 1 -1])
-                          [255 255 255]))
-           [-0.05  0.125 0.3 -0.3
-            -0.125 0.05 0.2 0.2
-            0.45 0.45 -0.45 -0.2]
-           [-0.875 -0.80 -0.725 -0.775
-            -0.70 -0.625 -0.35 -0.05
-            -0.45 -0.15 -0.45 -0.05])]))
+     (map (fn [x y]
+            (svg/polygon (mapv (fn [xx yy]
+                                 (calc-pt [(+ x (* xx DOT_SIZE))
+                                           (+ y (* yy DOT_SIZE))]))
+                               [-1 -1 1 1]
+                               [-1 1 1 -1])
+                         [255 255 255]))
+          [-0.05  0.125 0.3 -0.3
+           -0.125 0.05 0.2 0.2
+           0.45 0.45 -0.45 -0.2]
+          [-0.875 -0.80 -0.725 -0.775
+           -0.70 -0.625 -0.35 -0.05
+           -0.45 -0.15 -0.45 -0.05])]))
 
 (defn draw-tile-svg [x y pos hex xx yy color chosen-tile]
+  ^{:key (str "draw-tile-svg-root:" [x y pos hex xx yy])}
   [:g
    (for [z (range 2)]
      (svg/polygon (mapv (fn [[px py]]
@@ -464,18 +466,20 @@
 
 (defn draw-board-svg [board chosen-tile legal-tiles]
   [:g
-   (for [y (range BOARD_SIZE)
-         x (range BOARD_SIZE)]
+   (for [y (range BOARD_SIZE), x (range BOARD_SIZE)]
+
      (let [pos (+ x (* BOARD_SIZE y))
            hex (get board pos)
            xx (* BOARD_SCALE (+ (* 2 x) (- BOARD_SIZE y)))
            yy (* BOARD_SCALE (+ (* y 0.7) TOP_OFFSET))
-           col (svg/brightness (nth DIE_COLORS (first hex))
-                               (* -15 (- BOARD_SIZE y)))]
+           col (svg/brightness (nth DIE_COLORS (first hex)) (* -15 (- BOARD_SIZE y)))]
        (if (some #{pos} legal-tiles)
+         ^{:key (str "darw-board-" [x y])}
          [:g
           [:a {:href (make-game-link pos)}
            (draw-tile-svg x y pos hex xx yy col chosen-tile)]]
+
+         ^{:key (str "darw-board-" [x y])}
          (draw-tile-svg x y pos hex xx yy col chosen-tile))))])
 
 (defn draw-dod-page [tree selected-tile]
@@ -495,3 +499,7 @@
         (->> moves
              (map deref)
              (map first)))))))
+
+(defn test-page []
+  (draw-dod-page
+   (game-tree (gen-board) 0 0 true) nil))
