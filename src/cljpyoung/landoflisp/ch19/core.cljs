@@ -1,8 +1,9 @@
 (ns cljpyoung.landoflisp.ch19.core
   (:refer-clojure :exclude [rand])
   (:require
-    [goog.string :as gstring]
-    [goog.string.format :as format]
+   [re-frame.core :as rf]
+   [goog.string :as gstring]
+   [goog.string.format :as format]
 
    [cljpyoung.svg :as svg :include-macros true]
    [cljpyoung.landoflisp.common.rand :as rand]))
@@ -445,7 +446,8 @@
   ^{:key (str "draw-tile-svg-root:" [x y pos hex xx yy])}
   ;; on-click on :g
   ;; ref: https://stackoverflow.com/questions/39706869/add-onclick-event-to-a-group-element-svg-with-react
-  [:g {:on-click #(js/alert (str "hi" [x y pos])) :style {:pointer-events "bounding-box;"}}
+  [:g {:style {:pointer-events "bounding-box"}
+       :on-click #(rf/dispatch [:evt-user-select [chosen-tile pos]])}
    (for [z (range 2)]
      (svg/polygon (mapv (fn [[px py]]
                           [(+ xx (* BOARD_SCALE px)) (+ yy (* BOARD_SCALE (+ py (* (- 1 z) 0.1))))])
@@ -501,7 +503,3 @@
         (->> moves
              (map deref)
              (map first)))))))
-
-(defn test-page []
-  (draw-dod-page
-   (game-tree (gen-board) 0 0 true) nil))

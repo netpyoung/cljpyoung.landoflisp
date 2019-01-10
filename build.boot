@@ -34,14 +34,22 @@
    ;; clojurescript
    [org.clojure/clojurescript "1.10.439"]
 
+   ;; `React!`
+   [cljsjs/react "16.0.0-0"]
+   [cljsjs/react-dom "16.0.0-0"]
+   [cljsjs/react-with-addons "15.4.2-2"]
+
+
    ;; reagent : https://github.com/reagent-project/reagent
    [reagent "0.7.0" :exclusions [cljsjs/react]]
    ;; re-frame : https://github.com/Day8/re-frame
    [re-frame "0.10.6"]
-
-   [cljsjs/react "16.0.0-0"]
-   [cljsjs/react-dom "16.0.0-0"]
-   [cljsjs/react-with-addons "15.4.2-2"]
+   ;; re-frame-10x : https://github.com/Day8/re-frame-10x
+   [day8.re-frame/re-frame-10x "0.3.6-react16"]
+   ;; `re-frame-10x` need this. https://clojars.org/cljsjs/create-react-class
+   [cljsjs/create-react-class "15.6.3-1"]
+   ;; re-frame/tracing : https://github.com/Day8/re-frame-debux/blob/master/README.md#installation
+   [day8.re-frame/tracing "0.5.1"]
 
 
    [adzerk/boot-cljs "2.1.5" :scope "test"]

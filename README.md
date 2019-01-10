@@ -1,6 +1,10 @@
 # cljpyoung.landoflisp
 
 
+* https://github.com/robjens/boot-reframe-10x
+* https://github.com/Day8/re-frame-10x/issues/196
+* https://clojars.org/cljsjs/create-react-class
+
 ![](./landoflisp.svg)
 
 
