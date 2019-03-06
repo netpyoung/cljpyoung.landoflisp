@@ -8,7 +8,6 @@
    [cljpyoung.svg :as svg :include-macros true]
    [cljpyoung.landoflisp.common.rand :as rand]))
 
-
 ;; Dice of Doom. v3
 (def NUM_PLAYERS 2)
 (def MAX_DICE 2)
@@ -28,8 +27,6 @@
 (def DOT_SIZE 0.05)
 (def DIE_COLORS [[255 63 63] [63 63 255]])
 
-
-
 (def &cur-game-tree (atom nil))
 (def &from-tile (atom nil))
 
@@ -39,7 +36,6 @@
 ;;       :board [[player dice]]
 ;;       :moves [(delay move)]}
 ;; move {:action ([player dice] | nil) :tree}
-
 (def &random (atom (rand/->random 100)))
 (defn random [x]
   (binding [rand/*rand* @&random]
@@ -94,14 +90,15 @@
   > (neighbors 2)
   ;;=> #{0 3}"
   [pos]
-  (let [up (- pos BOARD_SIZE)
+  (let [up   (- pos BOARD_SIZE)
         down (+ pos BOARD_SIZE)]
     (->> [up down]
          (concat
-          (when-not (zero? (mod pos BOARD_SIZE)) [(dec up) (dec pos)])
-          (when-not (zero? (mod (inc pos) BOARD_SIZE)) [(inc pos) (inc down)]))
+           (when-not (zero? (mod pos BOARD_SIZE)) [(dec up) (dec pos)])
+           (when-not (zero? (mod (inc pos) BOARD_SIZE)) [(inc pos) (inc down)]))
          (filter #(and (<= 0 %) (< % BOARD_HEXNUM)))
          (set))))
+
 (def neighbors (memoize neighbors'))
 
 (defn board-attack
@@ -112,7 +109,7 @@
   (vec (for [[pos hex] (map-indexed vector board)]
          (cond (= pos src) [player 1]
                (= pos dst) [player (dec dice)]
-               :else hex))))
+               :else       hex))))
 
 (defn add-new-dice
   "
@@ -121,13 +118,12 @@
   [board player spare-dice]
   (loop [acc [], lst board, n spare-dice]
     (cond (nil? lst) (vec acc)
-          (zero? n) (vec (concat acc lst))
-          :else
-          (let [[fst & rst] lst, [cur-player cur-dice] fst]
-            (if (and (= cur-player player)
-                     (< cur-dice MAX_DICE))
-              (recur (conj acc [cur-player (inc cur-dice)]) rst (dec n))
-              (recur (conj acc fst) rst n))))))
+          (zero? n)  (vec (concat acc lst))
+          :else      (let [[fst & rst] lst, [cur-player cur-dice] fst]
+                       (if (and (= cur-player player)
+                                (< cur-dice MAX_DICE))
+                         (recur (conj acc [cur-player (inc cur-dice)]) rst (dec n))
+                         (recur (conj acc fst) rst n))))))
 
 (declare add-passing-move)
 (declare attacking-moves)
@@ -138,12 +134,12 @@
   "
   [board player spare-dice is-first-move]
   {:player player
-   :board board
-   :moves (add-passing-move board
-                            player
-                            spare-dice
-                            is-first-move
-                            (attacking-moves board player spare-dice))})
+   :board  board
+   :moves  (add-passing-move board
+                             player
+                             spare-dice
+                             is-first-move
+                             (attacking-moves board player spare-dice))})
 (def game-tree (memoize game-tree'))
 
 (defn attacking-moves
@@ -159,14 +155,16 @@
          (filter #(= (player %) cur-player))
          (mapcat (fn [src]
                    (->> (neighbors src)
-                        (filter (fn [dst] (and (not= (player dst) cur-player) (> (dice src) (dice dst)))))
+                        (filter (fn [dst]
+                                  (and (not= (player dst) cur-player)
+                                       (> (dice src) (dice dst)))))
                         (map (fn [dst] [src dst])))))
          (map (fn [[src dst]]
                 (delay {:action [src dst]
-                        :tree (game-tree (board-attack board cur-player src dst (dice src))
-                                         cur-player
-                                         (+ spare-dice (dice dst))
-                                         false)
+                        :tree   (game-tree (board-attack board cur-player src dst (dice src))
+                                           cur-player
+                                           (+ spare-dice (dice dst))
+                                           false)
                         })))
          (vec))))
 
@@ -180,10 +178,10 @@
     moves
     (conj moves
           (delay {:action nil
-                  :tree (game-tree (add-new-dice board player (dec spare-dice))
-                                   (mod (inc player) NUM_PLAYERS)
-                                   0
-                                   true)}))))
+                  :tree   (game-tree (add-new-dice board player (dec spare-dice))
+                                     (mod (inc player) NUM_PLAYERS)
+                                     0
+                                     true)}))))
 
 
 (defn print-info
@@ -231,7 +229,7 @@
   (print "choose your move:")
   (let [{:keys [moves]} tree]
     (doseq [[n move] (map-indexed vector moves)]
-      (let [n (inc n)
+      (let [n      (inc n)
             action (:action (force move))]
         (println)
         (printf "%s. " n)
@@ -254,9 +252,9 @@
 (defn score-board [board player]
   (->> (map-indexed vector board)
        (map (fn [[pos [p _]]]
-              (cond (not= p player) -1
+              (cond (not= p player)         -1
                     (threatened? pos board) 1
-                    :else 2)))
+                    :else                   2)))
        (apply +)))
 
 (defn threatened? [pos board]
@@ -307,14 +305,14 @@
 (defn limit-tree-depth [tree depth]
   (let [{:keys [player board moves]} tree]
     {:player player
-     :board board
-     :moves (if (zero? depth)
-              []
-              (->> moves
-                   (mapv (fn [move]
-                           (let [{:keys [action tree]} (force move)]
-                             {:action action
-                              :tree (limit-tree-depth tree (dec depth))})))))}))
+     :board  board
+     :moves  (if (zero? depth)
+               []
+               (->> moves
+                    (mapv (fn [move]
+                            (let [{:keys [action tree]} (force move)]
+                              {:action action
+                               :tree   (limit-tree-depth tree (dec depth))})))))}))
 
 ;; (defn handle-computer [tree]
 ;;   (let [{:keys [player board moves]} tree]
@@ -372,8 +370,8 @@
       (score-board (:board tree) player))))
 
 (defn ab-get-ratings-min [tree player upper-limit lower-limit]
-  (loop [acc []
-         moves (:moves tree)
+  (loop [acc         []
+         moves       (:moves tree)
          upper-limit upper-limit]
     (if-not (pos? (count moves))
       acc
@@ -387,8 +385,8 @@
             (recur (conj acc x) rst (min x upper-limit))))))))
 
 (defn ab-get-ratings-max [tree player upper-limit lower-limit]
-  (loop [acc []
-         moves (:moves tree)
+  (loop [acc         []
+         moves       (:moves tree)
          lower-limit lower-limit]
     (if-not (pos? (count moves))
       acc
@@ -446,7 +444,7 @@
   ^{:key (str "draw-tile-svg-root:" [x y pos hex xx yy])}
   ;; on-click on :g
   ;; ref: https://stackoverflow.com/questions/39706869/add-onclick-event-to-a-group-element-svg-with-react
-  [:g {:style {:pointer-events "bounding-box"}
+  [:g {:style    {:pointer-events "bounding-box"}
        :on-click #(rf/dispatch [:evt-user-select [chosen-tile pos]])}
    (for [z (range 2)]
      (svg/polygon (mapv (fn [[px py]]
@@ -474,8 +472,8 @@
 
      (let [pos (+ x (* BOARD_SIZE y))
            hex (get board pos)
-           xx (* BOARD_SCALE (+ (* 2 x) (- BOARD_SIZE y)))
-           yy (* BOARD_SCALE (+ (* y 0.7) TOP_OFFSET))
+           xx  (* BOARD_SCALE (+ (* 2 x) (- BOARD_SIZE y)))
+           yy  (* BOARD_SCALE (+ (* y 0.7) TOP_OFFSET))
            col (svg/brightness (nth DIE_COLORS (first hex)) (* -15 (- BOARD_SIZE y)))]
        (if (some #{pos} legal-tiles)
          ^{:key (str "darw-board-" [x y])}
@@ -489,17 +487,17 @@
 (defn draw-dod-page [tree selected-tile]
   (let [{:keys [board moves]} tree]
     (svg/svg
-     BOARD_WIDTH BOARD_HEIGHT
-     (draw-board-svg
-      board
-      selected-tile
-      (if selected-tile
-        (->> moves
-             (map deref)
-             (map (fn [move]
-                    (let [[tile dice] move]
-                      (when (= tile selected-tile)
-                        dice)))))
-        (->> moves
-             (map deref)
-             (map first)))))))
+      BOARD_WIDTH BOARD_HEIGHT
+      (draw-board-svg
+        board
+        selected-tile
+        (if selected-tile
+          (->> moves
+               (map deref)
+               (map (fn [move]
+                      (let [[tile dice] move]
+                        (when (= tile selected-tile)
+                          dice)))))
+          (->> moves
+               (map deref)
+               (map first)))))))

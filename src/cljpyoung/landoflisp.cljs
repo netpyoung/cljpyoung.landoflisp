@@ -9,62 +9,65 @@
 ;; DB
 ;; =====================================
 (def initial-db
-  {:test 0
-   :winner nil
-   :from-tile nil
-   :chosen nil
+  {:test           0
+   :winner         nil
+   :from-tile      nil
+   :chosen         nil
    :curr-game-tree (ch19/game-tree (ch19/gen-board 1) 0 0 true)})
 
 ;; =====================================
 ;; Events
 ;; =====================================
 (rf/reg-event-db
- :evt-init-game
- (fn-traced [_ _]
-   initial-db))
+  :evt-init-game
+  (fn-traced [_ _]
+    initial-db))
 
 (rf/reg-event-db
- :evt-start-game
- (fn-traced [db _]
-   db))
+  :evt-start-game
+  (fn-traced [db _]
+    db))
 
 (rf/reg-event-db
- :test
- (fn-traced [db [_ test-val]]
-   (update-in db [:test] + test-val)))
+  :test
+  (fn-traced [db [_ test-val]]
+    (update-in db [:test] + test-val)))
 
 (rf/reg-event-db
- :evt-user-select
- (fn-traced [db [_ [chosen-tile pos]]]
-   (assoc db :chosen chosen-tile)))
+  :evt-user-select
+  (fn-traced [db [_ [chosen-tile pos]]]
+    (assoc db :chosen chosen-tile)))
 
 
 ;; =====================================
 ;; Sub
 ;; =====================================
 (rf/reg-sub
- :get-test
- (fn [db _]
-   (:test db)))
+  :get-test
+  (fn [db _]
+    (:test db)))
 
 (rf/reg-sub
- :get-game-state
- (fn [db _] db))
+  :get-game-state
+  (fn [db _] db))
 
 
 ;; =====================================
 ;; Logic
 ;; =====================================
+(declare main)
+(declare game)
+
 (defonce click-count (r/atom 0))
 
-(declare main)
-(defn on-js-reload []
+(defn on-js-reload
+  []
   (enable-console-print!)
   (main)
   (println "on-js-reload"))
 
-(declare game)
-(defn app-root []
+(defn app-root
+  []
   [:div
    (game @(rf/subscribe [:get-game-state]))
 
@@ -78,18 +81,22 @@
    [:h2 "hello" @(rf/subscribe [:get-test])]
    ])
 
-(defn announce-winner [player]
+(defn announce-winner
+  [player]
   (js/alert player))
 
-(defn handle-human [chosen]
+(defn handle-human
+  [chosen]
   (js/alert chosen))
 
-(defn handle-computer []
+(defn handle-computer
+  []
   (println "handle-computer"))
 
-(defn game [db]
+(defn game
+  [db]
   (let [{:keys [curr-game-tree from-tile chosen]} db
-        {:keys [player board moves]} curr-game-tree]
+        {:keys [player board moves]}              curr-game-tree]
     (enable-console-print!)
     (println curr-game-tree)
     (cond

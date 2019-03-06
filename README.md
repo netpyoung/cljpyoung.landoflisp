@@ -4,6 +4,9 @@
 * https://github.com/robjens/boot-reframe-10x
 * https://github.com/Day8/re-frame-10x/issues/196
 * https://clojars.org/cljsjs/create-react-class
+* https://www.youtube.com/watch?v=JCY_cHzklRs
+
+* TODO: https://github.com/Day8/re-com
 
 ![](./landoflisp.svg)
 

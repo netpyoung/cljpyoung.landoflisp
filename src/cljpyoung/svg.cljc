@@ -6,7 +6,6 @@
    #?(:cljs [goog.string :as gstring])
    #?(:cljs [goog.string.format :as format])))
 
-
 #?(:cljs
    (def format goog.string.format))
 
