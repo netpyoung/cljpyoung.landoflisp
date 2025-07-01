@@ -1,0 +1,14 @@
+;; shadow-cljs.edn
+{:deps {:aliases [:dev]}
+ :dev-http {8000 "resources/public"}
+
+ :builds
+ {:app
+  {:target :browser
+   :output-dir "resources/public/js"
+   :asset-path "/js"
+
+   :module-hash-names false
+   :modules {:main {:entries [cljpyoung.landoflisp]}}
+   ;;    :dev {:closure-defines {app.env/DEBUG true}}
+   :build-hooks [(shadow.cljs.build-report/hook)]}}}
