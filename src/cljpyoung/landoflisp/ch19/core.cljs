@@ -15,8 +15,8 @@
 (def BOARD_HEXNUM (* BOARD_SIZE BOARD_SIZE))
 (def AI_LEVEL 4)
 
-(def INT_MAX Number.MAX_SAFE_INTEGER)
-(def INT_MIN Number.MIN_SAFE_INTEGER)
+(def INT_MAX (.-MAX_SAFE_INTEGER js/Number))
+(def INT_MIN (.-MIN_SAFE_INTEGER js/Number))
 
 ;;
 (def BOARD_WIDTH 900)
@@ -223,29 +223,29 @@
       (printf "The game is a tie between %s" (mapv player-letter ws))
       (printf "The winner is %s" (player-letter (first ws))))))
 
-(defn handle-human
-  [tree]
-  (println)
-  (print "choose your move:")
-  (let [{:keys [moves]} tree]
-    (doseq [[n move] (map-indexed vector moves)]
-      (let [n      (inc n)
-            action (:action (force move))]
-        (println)
-        (printf "%s. " n)
-        (if action
-          (let [[from to] action]
-            (printf "%s -> %s" from to))
-          (print "end turn"))))
-    (println)
-    (->> (read) (dec) (get moves) force :tree)))
+;; (defn handle-human
+;;   [tree]
+;;   (println)
+;;   (print "choose your move:")
+;;   (let [{:keys [moves]} tree]
+;;     (doseq [[n move] (map-indexed vector moves)]
+;;       (let [n      (inc n)
+;;             action (:action (force move))]
+;;         (println)
+;;         (printf "%s. " n)
+;;         (if action
+;;           (let [[from to] action]
+;;             (printf "%s -> %s" from to))
+;;           (print "end turn"))))
+;;     (println)
+;;     (->> (read) (dec) (get moves) force :tree)))
 
-(defn play-vs-human [tree]
-  (print-info tree)
-  (let [{:keys [board moves]} tree]
-    (if-not (pos? (count moves))
-      (announce-winner board)
-      (recur (handle-human tree)))))
+;; (defn play-vs-human [tree]
+;;   (print-info tree)
+;;   (let [{:keys [board moves]} tree]
+;;     (if-not (pos? (count moves))
+;;       (announce-winner board)
+;;       (recur (handle-human tree)))))
 
 (declare get-ratings)
 (declare threatened?)
@@ -290,17 +290,17 @@
 ;;          force
 ;;          :tree)))
 
-(defn play-vs-computer [tree]
-  (print-info tree)
-  (let [{:keys [player board moves]} tree]
-    (cond (zero? (count moves))
-          (announce-winner board)
-
-          (= player 0)
-          (recur (handle-human tree))
-
-          :else
-          (recur (handle-computer tree)))))
+;; (defn play-vs-computer [tree]
+;;   (print-info tree)
+;;   (let [{:keys [player board moves]} tree]
+;;     (cond (zero? (count moves))
+;;           (announce-winner board)
+;;
+;;           (= player 0)
+;;           (recur (handle-human tree))
+;;
+;;           :else
+;;           (recur (handle-computer tree)))))
 
 (defn limit-tree-depth [tree depth]
   (let [{:keys [player board moves]} tree]

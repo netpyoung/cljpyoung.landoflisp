@@ -3,6 +3,7 @@
    [cljpyoung.landoflisp.ch19.core :as ch19]
    [day8.re-frame.tracing :refer-macros [fn-traced]]
    [reagent.core :as r]
+   [reagent.dom :as rdom]
    [re-frame.core :as rf]))
 
 ;; =====================================
@@ -153,5 +154,7 @@
   (if-let [node (js/document.getElementById  "app")]
     (do (rf/dispatch-sync [:evt-init-game])
         (rf/dispatch-sync [:evt-start-game])
-        (r/render-component [app-root] node))
+        (rdom/render [app-root] node))
     (js/alert "Fail to find `app`")))
+
+(main)
