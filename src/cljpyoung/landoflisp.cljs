@@ -1,7 +1,6 @@
 (ns cljpyoung.landoflisp
   (:require
    [cljpyoung.landoflisp.ch19.core :as ch19]
-   [day8.re-frame.tracing :refer-macros [fn-traced]]
    [reagent.core :as r]
    [reagent.dom :as rdom]
    [re-frame.core :as rf]))
@@ -21,22 +20,22 @@
 ;; =====================================
 (rf/reg-event-db
   :evt-init-game
-  (fn-traced [_ _]
+  (fn [_ _]
     initial-db))
 
 (rf/reg-event-db
   :evt-start-game
-  (fn-traced [db _]
+  (fn [db _]
     db))
 
 (rf/reg-event-db
   :test
-  (fn-traced [db [_ test-val]]
+  (fn [db [_ test-val]]
     (update-in db [:test] + test-val)))
 
 (rf/reg-event-db
   :evt-user-select
-  (fn-traced [db [_ [chosen-tile pos]]]
+  (fn [db [_ [chosen-tile pos]]]
     (assoc db :chosen chosen-tile)))
 
 
