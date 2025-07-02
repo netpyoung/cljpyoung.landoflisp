@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "devDependencies": {
+    "rimraf": "^6.0.1",
     "shadow-cljs": "3.1.7"
   },
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
+  },
+  "scripts": {
+    "watch": "npx shadow-cljs watch app",
+    "clean": "rimraf resources/public/js",
+    "build": "npm run clean && npx shadow-cljs release :app"
   }
 }
